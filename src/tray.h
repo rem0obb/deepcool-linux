@@ -9,5 +9,6 @@ typedef struct TrayIcon TrayIcon;
 TrayIcon *tray_icon_start(void);
 void tray_icon_stop(TrayIcon *tray);
 bool desktop_integration_install(const char *source_exe_path, char *error, size_t error_len);
+bool desktop_integration_uninstall(char *error, size_t error_len);
 
 #endif

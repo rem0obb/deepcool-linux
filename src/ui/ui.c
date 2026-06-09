@@ -1,5 +1,6 @@
 #include "ui.h"
 
+#include "../app_id.h"
 #include "../devices/protocol.h"
 #include "../service.h"
 
@@ -57,7 +58,7 @@ static void install_app_icon(void) {
     if (!display) return;
     GtkIconTheme *theme = gtk_icon_theme_get_for_display(display);
     gtk_icon_theme_add_resource_path(theme, "/io/github/deepcool/digital/linux");
-    gtk_window_set_default_icon_name("deepcool-digital-linux");
+    gtk_window_set_default_icon_name(DEEPCOOL_ICON_NAME);
 }
 
 static void draw_gauge(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer user_data, bool gpu) {
@@ -552,7 +553,7 @@ void ui_activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *win = gtk_application_window_new(app);
     state->window = win;
     gtk_window_set_title(GTK_WINDOW(win), "DeepCool Digital Linux");
-    gtk_window_set_icon_name(GTK_WINDOW(win), "deepcool-digital-linux");
+    gtk_window_set_icon_name(GTK_WINDOW(win), DEEPCOOL_ICON_NAME);
     gtk_window_set_default_size(GTK_WINDOW(win), 1180, 720);
     gtk_window_set_resizable(GTK_WINDOW(win), FALSE);
 
@@ -562,7 +563,7 @@ void ui_activate(GtkApplication *app, gpointer user_data) {
 
     GtkWidget *topbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
     gtk_widget_add_css_class(topbar, "topbar");
-    GtkWidget *logo = gtk_picture_new_for_resource("/io/github/deepcool/digital/linux/deepcool.png");
+    GtkWidget *logo = gtk_picture_new_for_resource(DEEPCOOL_RESOURCE_ICON);
     gtk_picture_set_content_fit(GTK_PICTURE(logo), GTK_CONTENT_FIT_CONTAIN);
     gtk_picture_set_can_shrink(GTK_PICTURE(logo), TRUE);
     gtk_widget_set_size_request(logo, 18, 18);

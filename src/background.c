@@ -1,5 +1,6 @@
 #include "background.h"
 
+#include "app_id.h"
 #include "app_state.h"
 #include "devices/protocol.h"
 #include "service.h"
@@ -55,10 +56,19 @@ int background_run(void) {
 
     TrayIcon *tray = tray_icon_start();
 
-    GApplication *notifier = g_application_new("io.github.deepcool.digital.linux.background", G_APPLICATION_DEFAULT_FLAGS);
+    GApplication *notifier = g_application_new(DEEPCOOL_APP_ID ".background", G_APPLICATION_DEFAULT_FLAGS);
     if (g_application_register(notifier, NULL, NULL) && g_application_get_dbus_connection(notifier)) {
         GNotification *notification = g_notification_new("DeepCool Digital");
         g_notification_set_body(notification, "Running in background");
+        GError *icon_error = NULL;
+        GBytes *icon_bytes = g_resources_lookup_data(DEEPCOOL_RESOURCE_ICON, G_RESOURCE_LOOKUP_FLAGS_NONE, &icon_error);
+        if (icon_bytes) {
+            GIcon *icon = g_bytes_icon_new(icon_bytes);
+            g_notification_set_icon(notification, icon);
+            g_object_unref(icon);
+            g_bytes_unref(icon_bytes);
+        }
+        g_clear_error(&icon_error);
         g_application_send_notification(notifier, "deepcool-digital-running", notification);
         g_object_unref(notification);
     }

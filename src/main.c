@@ -1,5 +1,7 @@
 #include "app_state.h"
+#include "app_id.h"
 #include "background.h"
+#include "service.h"
 #include "tray.h"
 #include "ui/ui.h"
 
@@ -21,7 +23,19 @@ static int relaunch_with_pkexec(int argc, char **argv) {
     g_ptr_array_add(args, g_strdup("pkexec"));
     g_ptr_array_add(args, g_strdup("env"));
 
-    const char *env_names[] = {"DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "XDG_RUNTIME_DIR", NULL};
+    const char *env_names[] = {
+        "DISPLAY",
+        "WAYLAND_DISPLAY",
+        "XAUTHORITY",
+        "XDG_RUNTIME_DIR",
+        "XDG_CURRENT_DESKTOP",
+        "DESKTOP_STARTUP_ID",
+        "GIO_LAUNCHED_DESKTOP_FILE",
+        "GIO_LAUNCHED_DESKTOP_FILE_PID",
+        "KDE_FULL_SESSION",
+        "GNOME_DESKTOP_SESSION_ID",
+        NULL
+    };
     for (int i = 0; env_names[i]; i++) {
         const char *value = g_getenv(env_names[i]);
         if (value && value[0]) g_ptr_array_add(args, g_strdup_printf("%s=%s", env_names[i], value));
@@ -64,14 +78,34 @@ static int install_to_local(void) {
     }
 
     printf("Installed DeepCool Digital Linux to ~/.local/bin/deepcool-digital-linux\n");
-    printf("Desktop entry installed to ~/.local/share/applications/unnoficial.deepcool.digital.linux.desktop\n");
+    printf("Desktop entry installed to ~/.local/share/applications/%s.desktop\n", DEEPCOOL_APP_ID);
     printf("If it does not appear immediately, log out and back in or refresh your application menu.\n");
+    return 0;
+}
+
+static int uninstall_from_local(void) {
+    char error[512] = "";
+    if (!service_disable(error, sizeof(error))) {
+        fprintf(stderr, "Failed to remove deepcool-digital.service: %s\n", error[0] ? error : "administrator permission was denied");
+        fprintf(stderr, "Uninstall aborted to avoid leaving a broken background service.\n");
+        return 1;
+    }
+
+    if (!desktop_integration_uninstall(error, sizeof(error))) {
+        fprintf(stderr, "%s\n", error[0] ? error : "Failed to uninstall DeepCool Digital Linux.");
+        return 1;
+    }
+
+    printf("Removed deepcool-digital.service.\n");
+    printf("Removed DeepCool Digital Linux from ~/.local.\n");
+    printf("If it still appears in your application menu, log out and back in or refresh your application menu.\n");
     return 0;
 }
 
 int main(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--install") == 0) return install_to_local();
+        if (strcmp(argv[i], "--uninstall") == 0) return uninstall_from_local();
         if (strcmp(argv[i], "--background") == 0) return background_run();
     }
 
@@ -81,7 +115,10 @@ int main(int argc, char **argv) {
     memset(&state, 0, sizeof(state));
     g_mutex_init(&state.lock);
 
-    GtkApplication *app = gtk_application_new("unnoficial.deepcool.digital.linux", G_APPLICATION_DEFAULT_FLAGS);
+    g_set_prgname(DEEPCOOL_APP_ID);
+    g_set_application_name("DeepCool Digital Linux");
+
+    GtkApplication *app = gtk_application_new(DEEPCOOL_APP_ID, G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(app, "activate", G_CALLBACK(ui_activate), &state);
     int status = g_application_run(G_APPLICATION(app), argc, argv);
 

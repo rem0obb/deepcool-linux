@@ -1,6 +1,9 @@
 #include "tray.h"
 
+#include "app_id.h"
+
 #include <gio/gio.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib/gstdio.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -8,9 +11,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define APP_ID "unnoficial.deepcool.digital.linux"
-#define ICON_NAME "deepcool-digital-linux"
-#define RESOURCE_ICON "/io/github/deepcool/digital/linux/deepcool.png"
 #define SNI_PATH "/StatusNotifierItem"
 
 struct TrayIcon {
@@ -18,6 +18,7 @@ struct TrayIcon {
     GDBusNodeInfo *node;
     guint registration_id;
     guint name_id;
+    GVariant *icon_pixmap;
     GMainContext *context;
     GMainLoop *loop;
     GThread *thread;
@@ -37,6 +38,7 @@ static const char *sni_xml =
     "    <property name='WindowId' type='u' access='read'/>"
     "    <property name='IconName' type='s' access='read'/>"
     "    <property name='IconPixmap' type='a(iiay)' access='read'/>"
+    "    <property name='IconThemePath' type='s' access='read'/>"
     "    <property name='ToolTip' type='(sa(iiay)ss)' access='read'/>"
     "    <property name='ItemIsMenu' type='b' access='read'/>"
     "    <signal name='NewIcon'/>"
@@ -51,6 +53,45 @@ static GVariant *empty_pixmaps(void) {
     return g_variant_builder_end(&builder);
 }
 
+static GVariant *pixbuf_to_sni_pixmap(GdkPixbuf *pixbuf) {
+    GVariantBuilder pixmaps;
+    GVariantBuilder bytes;
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+    int channels = gdk_pixbuf_get_n_channels(pixbuf);
+    int rowstride = gdk_pixbuf_get_rowstride(pixbuf);
+    gboolean has_alpha = gdk_pixbuf_get_has_alpha(pixbuf);
+    const guchar *pixels = gdk_pixbuf_get_pixels(pixbuf);
+
+    g_variant_builder_init(&pixmaps, G_VARIANT_TYPE("a(iiay)"));
+    g_variant_builder_init(&bytes, G_VARIANT_TYPE("ay"));
+    for (int y = 0; y < height; y++) {
+        const guchar *row = pixels + y * rowstride;
+        for (int x = 0; x < width; x++) {
+            const guchar *p = row + x * channels;
+            guchar a = has_alpha ? p[3] : 255;
+            g_variant_builder_add(&bytes, "y", a);
+            g_variant_builder_add(&bytes, "y", p[0]);
+            g_variant_builder_add(&bytes, "y", p[1]);
+            g_variant_builder_add(&bytes, "y", p[2]);
+        }
+    }
+    g_variant_builder_add(&pixmaps, "(ii@ay)", width, height, g_variant_builder_end(&bytes));
+    return g_variant_builder_end(&pixmaps);
+}
+
+static GVariant *load_icon_pixmap(void) {
+    GError *error = NULL;
+    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_resource_at_scale(DEEPCOOL_RESOURCE_ICON, 32, 32, TRUE, &error);
+    if (!pixbuf) {
+        g_clear_error(&error);
+        return empty_pixmaps();
+    }
+    GVariant *variant = pixbuf_to_sni_pixmap(pixbuf);
+    g_object_unref(pixbuf);
+    return variant;
+}
+
 static GVariant *get_sni_property(GDBusConnection *connection, const char *sender, const char *object_path,
                                   const char *interface_name, const char *property_name, GError **error,
                                   gpointer user_data) {
@@ -62,13 +103,16 @@ static GVariant *get_sni_property(GDBusConnection *connection, const char *sende
     (void)user_data;
 
     if (g_strcmp0(property_name, "Category") == 0) return g_variant_new_string("ApplicationStatus");
-    if (g_strcmp0(property_name, "Id") == 0) return g_variant_new_string(ICON_NAME);
+    TrayIcon *tray = user_data;
+
+    if (g_strcmp0(property_name, "Id") == 0) return g_variant_new_string(DEEPCOOL_ICON_NAME);
     if (g_strcmp0(property_name, "Title") == 0) return g_variant_new_string("DeepCool Digital");
     if (g_strcmp0(property_name, "Status") == 0) return g_variant_new_string("Active");
     if (g_strcmp0(property_name, "WindowId") == 0) return g_variant_new_uint32(0);
-    if (g_strcmp0(property_name, "IconName") == 0) return g_variant_new_string(ICON_NAME);
-    if (g_strcmp0(property_name, "IconPixmap") == 0) return empty_pixmaps();
-    if (g_strcmp0(property_name, "ToolTip") == 0) return g_variant_new("(s@a(iiay)ss)", ICON_NAME, empty_pixmaps(), "DeepCool Digital", "Running in background");
+    if (g_strcmp0(property_name, "IconName") == 0) return g_variant_new_string(DEEPCOOL_ICON_NAME);
+    if (g_strcmp0(property_name, "IconPixmap") == 0) return g_variant_ref(tray->icon_pixmap);
+    if (g_strcmp0(property_name, "IconThemePath") == 0) return g_variant_new_string("");
+    if (g_strcmp0(property_name, "ToolTip") == 0) return g_variant_new("(s@a(iiay)ss)", DEEPCOOL_ICON_NAME, g_variant_ref(tray->icon_pixmap), "DeepCool Digital", "Running in background");
     if (g_strcmp0(property_name, "ItemIsMenu") == 0) return g_variant_new_boolean(FALSE);
     return NULL;
 }
@@ -141,6 +185,7 @@ static gpointer tray_thread_run(gpointer user_data) {
 
 TrayIcon *tray_icon_start(void) {
     TrayIcon *tray = g_new0(TrayIcon, 1);
+    tray->icon_pixmap = load_icon_pixmap();
     tray->context = g_main_context_new();
     tray->thread = g_thread_new("deepcool-tray", tray_thread_run, tray);
     return tray;
@@ -153,6 +198,7 @@ void tray_icon_stop(TrayIcon *tray) {
     if (tray->name_id) g_bus_unown_name(tray->name_id);
     if (tray->registration_id && tray->connection) g_dbus_connection_unregister_object(tray->connection, tray->registration_id);
     if (tray->node) g_dbus_node_info_unref(tray->node);
+    if (tray->icon_pixmap) g_variant_unref(tray->icon_pixmap);
     if (tray->connection) g_object_unref(tray->connection);
     if (tray->context) g_main_context_unref(tray->context);
     g_free(tray);
@@ -211,8 +257,8 @@ bool desktop_integration_install(const char *source_exe_path, char *error, size_
     chown_if_needed(icons_dir);
 
     char *bin_path = g_build_filename(bin_dir, "deepcool-digital-linux", NULL);
-    char *desktop_path = g_build_filename(apps_dir, APP_ID ".desktop", NULL);
-    char *icon_path = g_build_filename(icons_dir, ICON_NAME ".png", NULL);
+    char *desktop_path = g_build_filename(apps_dir, DEEPCOOL_APP_ID ".desktop", NULL);
+    char *icon_path = g_build_filename(icons_dir, DEEPCOOL_ICON_NAME ".png", NULL);
 
     GFile *source = g_file_new_for_path(source_exe_path);
     GFile *dest = g_file_new_for_path(bin_path);
@@ -236,7 +282,7 @@ bool desktop_integration_install(const char *source_exe_path, char *error, size_
     chown_if_needed(bin_path);
 
     GError *resource_error = NULL;
-    GBytes *bytes = g_resources_lookup_data(RESOURCE_ICON, G_RESOURCE_LOOKUP_FLAGS_NONE, &resource_error);
+    GBytes *bytes = g_resources_lookup_data(DEEPCOOL_RESOURCE_ICON, G_RESOURCE_LOOKUP_FLAGS_NONE, &resource_error);
     ok = bytes && g_file_set_contents(icon_path, g_bytes_get_data(bytes, NULL), (gssize)g_bytes_get_size(bytes), NULL);
     if (bytes) g_bytes_unref(bytes);
     g_clear_error(&resource_error);
@@ -255,8 +301,8 @@ bool desktop_integration_install(const char *source_exe_path, char *error, size_
         "StartupNotify=true\n"
         "StartupWMClass=%s\n",
         exe_quoted,
-        ICON_NAME,
-        APP_ID);
+        DEEPCOOL_ICON_NAME,
+        DEEPCOOL_APP_ID);
     if (!g_file_set_contents(desktop_path, desktop, -1, NULL)) {
         snprintf(error, error_len, "Failed to write %s", desktop_path);
         ok = false;
@@ -271,6 +317,36 @@ bool desktop_integration_install(const char *source_exe_path, char *error, size_
     g_free(bin_dir);
     g_free(apps_dir);
     g_free(icons_dir);
+    g_free(home);
+    return ok;
+}
+
+bool desktop_integration_uninstall(char *error, size_t error_len) {
+    char *home = original_home();
+    char *bin_path = g_build_filename(home, ".local", "bin", "deepcool-digital-linux", NULL);
+    char *desktop_path = g_build_filename(home, ".local", "share", "applications", DEEPCOOL_APP_ID ".desktop", NULL);
+    char *icon_path = g_build_filename(home, ".local", "share", "icons", "hicolor", "256x256", "apps", DEEPCOOL_ICON_NAME ".png", NULL);
+
+    bool ok = true;
+    const char *paths[] = {bin_path, desktop_path, icon_path, NULL};
+    for (int i = 0; paths[i]; i++) {
+        if (g_file_test(paths[i], G_FILE_TEST_EXISTS) && g_remove(paths[i]) != 0) {
+            snprintf(error, error_len, "Failed to remove %s", paths[i]);
+            ok = false;
+            break;
+        }
+    }
+
+    char *icons_apps = g_build_filename(home, ".local", "share", "icons", "hicolor", "256x256", "apps", NULL);
+    char *icons_256 = g_build_filename(home, ".local", "share", "icons", "hicolor", "256x256", NULL);
+    g_rmdir(icons_apps);
+    g_rmdir(icons_256);
+
+    g_free(icons_apps);
+    g_free(icons_256);
+    g_free(bin_path);
+    g_free(desktop_path);
+    g_free(icon_path);
     g_free(home);
     return ok;
 }

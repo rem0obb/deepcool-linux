@@ -144,8 +144,16 @@ bool service_install_enable(AppState *state, char *error, size_t error_len) {
     char *cfg_path = config_path();
     const char *session_bus = g_getenv("DBUS_SESSION_BUS_ADDRESS");
     const char *runtime_dir = g_getenv("XDG_RUNTIME_DIR");
+    const char *display = g_getenv("DISPLAY");
+    const char *wayland_display = g_getenv("WAYLAND_DISPLAY");
+    const char *xauthority = g_getenv("XAUTHORITY");
+    const char *current_desktop = g_getenv("XDG_CURRENT_DESKTOP");
     char *session_env = session_bus && session_bus[0] ? g_strdup_printf("Environment=DBUS_SESSION_BUS_ADDRESS=%s\n", session_bus) : g_strdup("");
     char *runtime_env = runtime_dir && runtime_dir[0] ? g_strdup_printf("Environment=XDG_RUNTIME_DIR=%s\n", runtime_dir) : g_strdup("");
+    char *display_env = display && display[0] ? g_strdup_printf("Environment=DISPLAY=%s\n", display) : g_strdup("");
+    char *wayland_env = wayland_display && wayland_display[0] ? g_strdup_printf("Environment=WAYLAND_DISPLAY=%s\n", wayland_display) : g_strdup("");
+    char *xauth_env = xauthority && xauthority[0] ? g_strdup_printf("Environment=XAUTHORITY=%s\n", xauthority) : g_strdup("");
+    char *desktop_env = current_desktop && current_desktop[0] ? g_strdup_printf("Environment=XDG_CURRENT_DESKTOP=%s\n", current_desktop) : g_strdup("");
 
     char *unit = g_strdup_printf(
         "[Unit]\n"
@@ -156,6 +164,10 @@ bool service_install_enable(AppState *state, char *error, size_t error_len) {
         "Environment=DEEPCOOL_CONFIG=%s\n"
         "%s"
         "%s"
+        "%s"
+        "%s"
+        "%s"
+        "%s"
         "ExecStart=%s --background\n"
         "Restart=on-failure\n"
         "RestartSec=5s\n\n"
@@ -164,12 +176,20 @@ bool service_install_enable(AppState *state, char *error, size_t error_len) {
         cfg_path,
         session_env,
         runtime_env,
+        display_env,
+        wayland_env,
+        xauth_env,
+        desktop_env,
         exe);
     char *tmp_path = g_strdup_printf("%s/deepcool-digital.service.tmp", g_get_tmp_dir());
     bool ok = g_file_set_contents(tmp_path, unit, -1, NULL);
     g_free(cfg_path);
     g_free(session_env);
     g_free(runtime_env);
+    g_free(display_env);
+    g_free(wayland_env);
+    g_free(xauth_env);
+    g_free(desktop_env);
     g_free(unit);
     if (!ok) {
         g_free(tmp_path);

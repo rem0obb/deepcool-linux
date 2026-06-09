@@ -1,73 +1,65 @@
-# Deepcool Linux
+# DeepCool Digital Linux
 
-This GTK application is meant to replicate the functionality of the original `DeepCool Digital`
-Windows program on Linux. It detects supported DeepCool USB/HID devices, shows live CPU/GPU
-monitoring data, and sends the display data stream directly from the graphical interface.
+Unofficial GTK control panel for DeepCool Digital USB/HID devices on Linux.
 
-If you have a device that has not been added or tested yet, please read the notes below the
-supported devices.
-If you think you can collaborate, please write an issue so we can get in touch.
+It shows CPU/GPU data, sends display data to supported devices, and can run in the background with
+`deepcool-digital.service`.
 
-> [!WARNING]
-> This software is not official. Use it at your own risk and at the risk of your account.
+> This project is not affiliated with DeepCool.
 
-For installation, you can download it here 
-
-## Install
-
-Build and install into your user profile:
+## Build
 
 ```sh
 make
+```
+
+## Install
+
+```sh
 ./deepcool-digital-linux --install
 ```
 
-This installs:
+This installs the app into `~/.local/bin` and adds the desktop launcher/icon.
 
-- `~/.local/bin/deepcool-digital-linux`
-- `~/.local/share/applications/unnoficial.deepcool.digital.linux.desktop`
-- `~/.local/share/icons/hicolor/256x256/apps/deepcool-digital-linux.png`
+Run it from your application menu after installing. The app asks for administrator permission when
+needed because HID access usually requires root privileges.
 
-After installing, launch **DeepCool Digital Linux** from your application menu. The app asks for
-administrator permission when needed because DeepCool HID devices normally require root access.
+## Uninstall
+
+```sh
+~/.local/bin/deepcool-digital-linux --uninstall
+```
+
+This also disables and removes `deepcool-digital.service`.
 
 ## Dependencies
 
-Runtime libraries needed by the binary:
-
-- GTK 4
-- GLib / GIO
-- hidapi with hidraw backend
-- Cairo, Pango, HarfBuzz, GDK Pixbuf, Graphene
-- `pkexec` / polkit, used to request administrator permission
-- systemd, used by the optional background service
-- Desktop StatusNotifier/AppIndicator support if you want the background tray icon
-
-Build tools needed from source:
-
-- C compiler, `make`, `pkg-config`
-- GTK 4 development package
-- hidapi development package
-- GLib resource compiler, usually `glib-compile-resources`
-
-Example package names:
+### Debian/Ubuntu
 
 ```sh
-# Debian/Ubuntu
 sudo apt install build-essential pkg-config libgtk-4-dev libhidapi-dev libglib2.0-dev-bin policykit-1
+```
 
-# Fedora
+### Fedora
+
+```sh
 sudo dnf install gcc make pkgconf-pkg-config gtk4-devel hidapi-devel glib2-devel polkit
+```
 
-# Arch
+### Arch
+
+```sh
 sudo pacman -S base-devel pkgconf gtk4 hidapi glib2 polkit
 ```
 
-# Deepcool 
+## Notes
 
-Initial interface how execute application 
+- Background mode uses `deepcool-digital.service`.
+- The tray icon requires StatusNotifier/AppIndicator support in your desktop environment.
+- For GNOME, you may need an AppIndicator/KStatusNotifierItem extension.
 
-![Deepcool](screenshoots/deepcool-interface.png)
+## Screenshots
 
-You can leave it running in the background whenever your PC starts up, so it will always display the settings you added on the screen.
-![Deepcool](screenshoots/deepcool-configs.png)
+![DeepCool interface](screenshoots/deepcool-interface.png)
+
+![DeepCool settings](screenshoots/deepcool-configs.png)
