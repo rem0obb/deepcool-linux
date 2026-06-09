@@ -13,6 +13,14 @@ It shows CPU/GPU data, sends display data to supported devices, and can run in t
 make
 ```
 
+## Package
+
+```sh
+packaging/package-release.sh 0.0.1
+```
+
+Artifacts are written to `dist/`.
+
 ## Install
 
 ```sh

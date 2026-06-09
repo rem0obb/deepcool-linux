@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DeepCool Digital Linux
+Comment=DeepCool Digital device monitor
+Exec=deepcool-digital-linux
+Icon=deepcool-digital-linux
+Terminal=false
+Categories=Utility;HardwareSettings;
+StartupNotify=true
+StartupWMClass=unnoficial.deepcool.digital.linux

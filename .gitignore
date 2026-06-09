@@ -1,2 +1,5 @@
 deepcool-digital-linux
 src/resources.c
+deepcool-digital-linux-static
+build/
+dist/
