@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepCool Digital Linux</title>
+  <meta name="description" content="Unofficial GTK control panel for DeepCool Digital USB/HID devices on Linux.">
+  <noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+  <style>
+    :root {
+      --ink: #14181b;
+      --muted: #6e777d;
+      --line: #e8ecef;
+      --panel: #f6f7f8;
+      --teal: #119c9a;
+      --teal-dark: #087d7b;
+      --white: #ffffff;
+      --shadow: 0 24px 70px rgba(17, 24, 28, 0.09);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--white);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+      padding: 0 34px;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .brand img {
+      width: 30px;
+      height: 30px;
+    }
+
+    .brand span {
+      font-size: 17px;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .nav a:hover {
+      color: var(--teal);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 700ms ease, transform 700ms ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .page {
+      overflow: hidden;
+    }
+
+    .hero {
+      position: relative;
+      isolation: isolate;
+      min-height: calc(100vh - 72px);
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+      gap: 48px;
+      align-items: center;
+      padding: 72px 7vw 54px;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.94) 43%, rgba(246, 247, 248, 1) 100%),
+        var(--panel);
+    }
+
+    .hero-bg-video {
+      position: absolute;
+      inset: 0 0 0 auto;
+      z-index: -2;
+      width: 56%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.22;
+      clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
+    }
+
+    .hero::after {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.94) 43%, rgba(255, 255, 255, 0.78) 100%),
+        linear-gradient(135deg, rgba(17, 156, 154, 0.12), transparent 54%);
+      content: "";
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 34px;
+      height: 2px;
+      background: var(--teal);
+      content: "";
+    }
+
+    h1 {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(46px, 6.5vw, 86px);
+      line-height: 0.96;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .hero p {
+      max-width: 620px;
+      margin: 26px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 36px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 22px;
+      border: 1px solid var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      transition: color 180ms ease, border-color 180ms ease, background 180ms ease, transform 180ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+    }
+
+    .button.primary {
+      border-color: var(--teal);
+      background: var(--teal);
+      color: var(--white);
+    }
+
+    .button.primary:hover {
+      background: var(--teal-dark);
+    }
+
+    .button.secondary:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .hero-shot {
+      position: relative;
+      align-self: center;
+      animation: floatIn 900ms ease both;
+    }
+
+    .hero-shot img {
+      width: 100%;
+      display: block;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      transition: transform 260ms ease, box-shadow 260ms ease;
+    }
+
+    .hero-shot:hover img {
+      transform: translateY(-6px);
+      box-shadow: 0 34px 90px rgba(17, 24, 28, 0.14);
+    }
+
+    .version-badge {
+      position: absolute;
+      right: 28px;
+      bottom: -24px;
+      display: grid;
+      place-items: center;
+      width: 106px;
+      height: 106px;
+      background: var(--ink);
+      color: var(--white);
+      font-weight: 850;
+      text-transform: uppercase;
+      animation: pulseBadge 2400ms ease-in-out infinite;
+    }
+
+    .version-badge span {
+      display: block;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    section {
+      padding: 78px 7vw;
+    }
+
+    .spec-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: var(--white);
+    }
+
+    .spec {
+      padding: 26px 7vw;
+      border-right: 1px solid var(--line);
+    }
+
+    .spec:last-child {
+      border-right: 0;
+    }
+
+    .spec strong {
+      display: block;
+      font-size: 22px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .spec span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 36px;
+      margin-bottom: 34px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .section-head p {
+      max-width: 520px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+
+    .feature {
+      min-height: 210px;
+      padding: 28px;
+      border-right: 1px solid var(--line);
+      transition: background 180ms ease, transform 180ms ease;
+    }
+
+    .feature:last-child {
+      border-right: 0;
+    }
+
+    .feature:hover {
+      background: var(--panel);
+      transform: translateY(-4px);
+    }
+
+    .number {
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .feature h3 {
+      margin: 52px 0 12px;
+      font-size: 20px;
+      text-transform: uppercase;
+    }
+
+    .feature p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .showcase {
+      background: var(--panel);
+    }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .showcase-grid figure {
+      margin: 0;
+      background: var(--white);
+      border: 1px solid var(--line);
+      transition: transform 220ms ease, box-shadow 220ms ease;
+    }
+
+    .showcase-grid figure:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow);
+    }
+
+    .showcase-grid img {
+      width: 100%;
+      display: block;
+    }
+
+    .showcase-grid figcaption {
+      padding: 18px 20px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .download {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+      gap: 56px;
+      align-items: center;
+    }
+
+    .package-callout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .package-card {
+      min-height: 210px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .package-card:hover {
+      border-color: rgba(17, 156, 154, 0.5);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow);
+    }
+
+    .package-card strong {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 24px;
+      text-transform: uppercase;
+    }
+
+    .package-card span {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .package-meta {
+      display: block;
+      margin-top: 28px;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .install-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 28px 7vw;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    @keyframes floatIn {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes pulseBadge {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+
+      .reveal {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .download {
+        grid-template-columns: 1fr;
+      }
+
+      .spec-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .spec:nth-child(2) {
+        border-right: 0;
+      }
+
+      .spec:nth-child(-n + 2) {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .features {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .feature {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .feature:nth-child(2) {
+        border-right: 0;
+      }
+
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+
+    }
+
+    @media (max-width: 700px) {
+      .topbar {
+        height: auto;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 16px;
+        padding: 18px 22px;
+      }
+
+      .nav {
+        width: 100%;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 11px;
+      }
+
+      .hero {
+        min-height: auto;
+        padding: 54px 22px 42px;
+      }
+
+      .hero-bg-video {
+        width: 100%;
+        opacity: 0.14;
+        clip-path: none;
+      }
+
+      section {
+        padding: 58px 22px;
+      }
+
+      .section-head {
+        display: block;
+      }
+
+      .section-head p {
+        margin-top: 18px;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+
+      .spec-strip,
+      .package-callout {
+        grid-template-columns: 1fr;
+      }
+
+      .spec {
+        padding: 22px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .spec:last-child {
+        border-bottom: 0;
+      }
+
+      .feature {
+        border-right: 0;
+      }
+
+      .version-badge {
+        right: 16px;
+        width: 84px;
+        height: 84px;
+        font-size: 14px;
+      }
+
+      .footer {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 24px 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">
+      <img src="assets/hicolor/256x256/apps/deepcool-digital-linux.png" alt="">
+      <span>DeepCool Digital Linux</span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#screenshots">Interface</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/rem0obb/deepcool-linux/releases/tag/v0.0.1">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <video class="hero-bg-video" muted autoplay loop playsinline preload="metadata" poster="https://www.deepcool.com/downloadpage/Mystique.jpg?fm=nocdn">
+        <source src="https://www.deepcool.com/downloadpage/Mystique.mp4?fm=nocdn" type="video/mp4">
+      </video>
+      <div class="reveal">
+        <div class="eyebrow">Unofficial Linux control panel</div>
+        <h1>DeepCool Digital on Linux</h1>
+        <p>
+          A GTK app for DeepCool Digital USB/HID devices, built to monitor hardware,
+          update the cooler display, and keep your setup running quietly in the background.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#download">Download packages</a>
+          <a class="button secondary" href="#screenshots">View interface</a>
+        </div>
+      </div>
+
+      <div class="hero-shot">
+        <img src="screenshoots/deepcool-interface.png" alt="DeepCool Digital Linux device dashboard">
+        <div class="version-badge"><span>Release</span>0.0.1</div>
+      </div>
+    </section>
+
+    <div class="spec-strip" aria-label="Project highlights">
+      <div class="spec">
+        <strong>AppImage</strong>
+        <span>Portable package</span>
+      </div>
+      <div class="spec">
+        <strong>.deb</strong>
+        <span>Debian and Ubuntu</span>
+      </div>
+      <div class="spec">
+        <strong>GTK/C</strong>
+        <span>Native Linux UI</span>
+      </div>
+      <div class="spec">
+        <strong>systemd</strong>
+        <span>Background mode</span>
+      </div>
+    </div>
+
+    <section id="features" class="reveal">
+      <div class="section-head">
+        <h2>Built for the desktop</h2>
+        <p>
+          The app keeps the original DeepCool Digital workflow familiar while adding Linux packaging,
+          local installation, tray presence, and background persistence.
+        </p>
+      </div>
+
+      <div class="features">
+        <article class="feature">
+          <div class="number">01</div>
+          <h3>Live data</h3>
+          <p>Track CPU, GPU, pump, fan, temperature, usage, power, and frequency data when supported by your system.</p>
+        </article>
+        <article class="feature">
+          <div class="number">02</div>
+          <h3>Display modes</h3>
+          <p>Choose what appears on the cooler panel and rotate between CPU usage and temperature with a custom interval.</p>
+        </article>
+        <article class="feature">
+          <div class="number">03</div>
+          <h3>Background mode</h3>
+          <p>Install a systemd service and keep the device updated without leaving the main window open.</p>
+        </article>
+        <article class="feature">
+          <div class="number">04</div>
+          <h3>Linux packages</h3>
+          <p>Use the portable AppImage or install the Debian package on Ubuntu, Debian, and compatible distributions.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="screenshots" class="showcase reveal">
+      <div class="section-head">
+        <h2>Clean control</h2>
+        <p>
+          White interface, teal accents, device pages, settings, and live previews inspired by the official DeepCool software style.
+        </p>
+      </div>
+
+      <div class="showcase-grid">
+        <figure>
+          <img src="screenshoots/deepcool-interface.png" alt="DeepCool Digital Linux overview screen">
+          <figcaption>Device overview and hardware information</figcaption>
+        </figure>
+        <figure>
+          <img src="screenshoots/deepcool-configs.png" alt="DeepCool Digital Linux configuration screen">
+          <figcaption>Panel configuration and display settings</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="download" class="download reveal">
+      <div>
+        <div class="eyebrow">Release v0.0.1</div>
+        <h2>Download for Linux</h2>
+        <p class="note">
+          Ready-to-use packages are available for the first release. Pick AppImage for a portable run,
+          or use the Debian package for a cleaner install on Debian, Ubuntu, and derivatives.
+        </p>
+        <p class="install-note">
+          The app asks for administrator permission when needed because supported DeepCool devices are accessed through USB/HID.
+          This project is community-made and is not affiliated with DeepCool.
+        </p>
+      </div>
+
+      <div class="package-callout">
+        <a class="package-card" href="https://github.com/rem0obb/deepcool-linux/releases/download/v0.0.1/DeepCool-Digital-Linux-0.0.1-x86_64.AppImage">
+          <strong>AppImage</strong>
+          <span>Portable build for most desktop distributions. Download, make it executable, and run.</span>
+          <em class="package-meta">DeepCool-Digital-Linux-0.0.1-x86_64.AppImage</em>
+        </a>
+        <a class="package-card" href="https://github.com/rem0obb/deepcool-linux/releases/download/v0.0.1/deepcool-digital-linux_0.0.1_amd64.deb">
+          <strong>Debian package</strong>
+          <span>Installable package for Debian, Ubuntu, Linux Mint, and compatible distributions.</span>
+          <em class="package-meta">deepcool-digital-linux_0.0.1_amd64.deb</em>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>DeepCool Digital Linux 0.0.1</span>
+    <span>Unofficial project for DeepCool Digital devices on Linux.</span>
+  </footer>
+  <script>
+    const revealItems = document.querySelectorAll(".reveal");
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.18 });
+
+    revealItems.forEach((item) => revealObserver.observe(item));
+  </script>
+</body>
+</html>
