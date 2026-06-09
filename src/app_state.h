@@ -1,0 +1,78 @@
+#ifndef DEEPCOOL_APP_STATE_H
+#define DEEPCOOL_APP_STATE_H
+
+#include "common.h"
+#include "devices/device.h"
+#include "monitor/cpu.h"
+#include "monitor/gpu.h"
+
+#include <gtk/gtk.h>
+
+typedef struct {
+    GtkApplication *app;
+    GtkWidget *window;
+    GtkWidget *content_stack;
+    GtkWidget *nav_monitor_button;
+    GtkWidget *nav_device_button;
+    GtkWidget *nav_settings_button;
+    GtkWidget *device_combo;
+    GtkWidget *gpu_combo;
+    GtkWidget *mode_combo;
+    GtkWidget *secondary_combo;
+    GtkWidget *fahrenheit_switch;
+    GtkWidget *alarm_switch;
+    GtkWidget *zeros_switch;
+    GtkWidget *rotate_combo;
+    GtkWidget *update_scale;
+    GtkWidget *auto_interval_scale;
+    GtkWidget *fahrenheit_label;
+    GtkWidget *alarm_label;
+    GtkWidget *zeros_label;
+    GtkWidget *status_label;
+    GtkWidget *cpu_label;
+    GtkWidget *cpu_temp_label;
+    GtkWidget *cpu_usage_label;
+    GtkWidget *cpu_power_label;
+    GtkWidget *cpu_freq_label;
+    GtkWidget *cpu_fan_label;
+    GtkWidget *gpu_temp_label;
+    GtkWidget *gpu_usage_label;
+    GtkWidget *gpu_power_label;
+    GtkWidget *gpu_freq_label;
+    GtkWidget *cpu_gauge;
+    GtkWidget *gpu_gauge;
+    GtkWidget *fan_area;
+    GtkWidget *device_name_label;
+    GtkWidget *device_kind_label;
+    GtkWidget *service_switch;
+    GtkWidget *service_status_label;
+    GMutex lock;
+    GThread *worker;
+    guint restart_source_id;
+    bool running;
+    bool stop_requested;
+    bool needs_root_warning;
+    bool suppress_config_events;
+    bool suppress_service_events;
+    Config config;
+    CpuMonitor cpu;
+    GpuMonitor gpu;
+    DeepCoolDevice devices[MAX_DEVICES];
+    size_t device_count;
+    PciGpu gpus[MAX_GPUS];
+    size_t gpu_count;
+    double cpu_temp;
+    double cpu_usage;
+    double cpu_power;
+    double cpu_freq;
+    double cpu_fan_rpm;
+    double gpu_temp;
+    double gpu_usage;
+    double gpu_power;
+    double gpu_freq;
+    double fan_phase;
+    char last_packet[192];
+    char status[256];
+} AppState;
+
+#endif

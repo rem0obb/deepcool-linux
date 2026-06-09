@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/github/deepcool/digital/linux">
+    <file alias="deepcool.png">hicolor/256x256/apps/deepcool-digital-linux.png</file>
+    <file>hicolor/index.theme</file>
+    <file>hicolor/256x256/apps/deepcool-digital-linux.png</file>
+  </gresource>
+</gresources>

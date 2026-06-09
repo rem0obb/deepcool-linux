@@ -1,0 +1,9 @@
+[Icon Theme]
+Name=DeepCool Digital Local Icons
+Comment=Local icons for DeepCool Digital Linux
+Directories=256x256/apps
+
+[256x256/apps]
+Context=Apps
+Size=256
+Type=Fixed
